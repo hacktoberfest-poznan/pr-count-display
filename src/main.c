@@ -23,7 +23,7 @@ int InotifyWatch = -1;
 #define INIT_SDL_FLAGS (SDL_INIT_EVENTS | SDL_INIT_TIMER | SDL_INIT_VIDEO)
 #define INIT_IMG_FLAGS (IMG_INIT_JPG | IMG_INIT_PNG)
 
-#define FPS_MINIMUM 3
+#define FPS_MINIMUM 25
 #define FPS_TICKS (1000 / FPS_MINIMUM)
 
 const SDL_Colour BackgroundColour = { .r = 0x15, .g = 0x23, .b = 0x47, .a = 255 };
@@ -139,7 +139,8 @@ void init_libs(void) {
 	
 	HacktoberfestSponsors = text_init(WINDOW_H / 12);
 	if(HacktoberfestSponsors == NULL) exit(EXIT_FAILURE);
-	
+
+	SDL_SetTextureBlendMode(Logo->tex, SDL_BLENDMODE_BLEND);
 	text_renderString(PrHeader, TextColour, "Pull Request count:");
 	text_renderString(MeetupSponsors, TextColour, "POZNAN MEETUP SPONSORS");
 	text_renderString(MediaPatrons, TextColour, "MEDIA PATRONS");
@@ -165,13 +166,7 @@ void draw_frame(void) {
 	SDL_SetRenderDrawColor(Window.renderer, BackgroundColour.r, BackgroundColour.g, BackgroundColour.b, BackgroundColour.a);
 	SDL_RenderFillRect(Window.renderer, NULL);
 
-	SDL_Rect dest = (SDL_Rect) {
-		.x = (WINDOW_W - Logo->w) / 2,
-		.y = 0,
-		.w = Logo->w,
-		.h = Logo->h
-	};
-	SDL_RenderCopy(Window.renderer, Logo->tex, NULL, &dest);
+	draw_logo();
 
 	Uint32 seconds = SDL_GetTicks() / 1000;
 	switch((seconds / 2) % 4){

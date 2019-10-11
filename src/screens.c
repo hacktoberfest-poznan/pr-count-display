@@ -3,6 +3,7 @@
 #include "image.h"
 #include "screens.h"
 #include "text.h"
+#include "utils.h"
 #include "window.h"
 
 struct Text *PrCount, *PrHeader;
@@ -12,6 +13,50 @@ struct Text *HacktoberfestSponsors, *MeetupSponsors, *MediaPatrons;
 struct Image *DOandDEV;
 struct Image *Sonalake, *Allegro;
 struct Image *PoIT, *OSWorld, *Linuxiarze;
+
+#define LOGO_HEARTBEAT_REST_TIME    5000
+#define LOGO_HEARTBEAT_BUILDUP_TIME  200
+#define LOGO_HEARTBEAT_ECHO_TIME     800
+#define LOGO_HEARTBEAT_TOTAL_TIME  (LOGO_HEARTBEAT_REST_TIME + LOGO_HEARTBEAT_BUILDUP_TIME + LOGO_HEARTBEAT_ECHO_TIME)
+
+#define LOGO_HEARTBEAT_BUILDUP_SCALE  1.05f
+#define LOGO_HEARTBEAT_ECHO_SCALE     1.25f
+#define LOGO_HEARTBEAT_ECHO_OPACITY   0.35f
+
+void draw_logo(void) {
+	float logoScale = -1.0f, echoScale = -1.0f, echoOpacity = 0.0f;
+
+	Uint32 ticks = SDL_GetTicks() % LOGO_HEARTBEAT_TOTAL_TIME;
+	if(ticks >= LOGO_HEARTBEAT_REST_TIME) {
+		if(ticks < LOGO_HEARTBEAT_REST_TIME + LOGO_HEARTBEAT_BUILDUP_TIME) {
+			float stageProgress = progress(ticks, LOGO_HEARTBEAT_REST_TIME, LOGO_HEARTBEAT_REST_TIME + LOGO_HEARTBEAT_BUILDUP_TIME);
+			logoScale = 1.0f + ((LOGO_HEARTBEAT_BUILDUP_SCALE - 1.0f) * stageProgress);
+		} else {
+			float stageProgress = progress(ticks, LOGO_HEARTBEAT_REST_TIME + LOGO_HEARTBEAT_BUILDUP_TIME, LOGO_HEARTBEAT_TOTAL_TIME);
+			logoScale = LOGO_HEARTBEAT_BUILDUP_SCALE - ((LOGO_HEARTBEAT_BUILDUP_SCALE - 1.0f) * stageProgress);
+			echoScale = LOGO_HEARTBEAT_BUILDUP_SCALE + ((LOGO_HEARTBEAT_ECHO_SCALE - LOGO_HEARTBEAT_BUILDUP_SCALE) * stageProgress);
+			echoOpacity = LOGO_HEARTBEAT_ECHO_OPACITY - (LOGO_HEARTBEAT_ECHO_OPACITY * stageProgress);
+		}
+	}
+
+	SDL_Rect logoDest = (SDL_Rect) {
+		.x = (WINDOW_W - Logo->w) / 2,
+		.y = 0,
+		.w = Logo->w,
+		.h = Logo->h
+	};
+	SDL_Rect echoDest = logoDest;
+	
+	if(logoScale > 0.0f) scale_rect(&logoDest, logoScale);
+	SDL_SetTextureAlphaMod(Logo->tex, 255);
+	SDL_RenderCopy(Window.renderer, Logo->tex, NULL, &logoDest);
+
+	if(echoScale > 0.0f) {
+		scale_rect(&echoDest, echoScale);
+		SDL_SetTextureAlphaMod(Logo->tex, 255 * echoOpacity);
+		SDL_RenderCopy(Window.renderer, Logo->tex, NULL, &echoDest);
+	}
+}
 
 void draw_counter(void) {
 	if(PrCount->tex == NULL) return;

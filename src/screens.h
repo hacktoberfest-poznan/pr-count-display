@@ -12,7 +12,9 @@ extern struct Image *DOandDEV;
 extern struct Image *Sonalake, *Allegro;
 extern struct Image *PoIT, *OSWorld, *Linuxiarze;
 
+extern void draw_logo(void);
 extern void draw_counter(void);
+
 extern void draw_meetup_sponsors(void);
 extern void draw_media_patrons(void);
 extern void draw_hacktoberfest_sponsors(void);
