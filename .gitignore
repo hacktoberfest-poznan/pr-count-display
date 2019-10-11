@@ -1,0 +1,14 @@
+# Build-related stuff
+*.a
+*.o
+*.h.gch
+build/
+
+# Other
+var/
+*.swp
+*.*~
+
+# IDE-related stuff
+*.geany
+.idea/
