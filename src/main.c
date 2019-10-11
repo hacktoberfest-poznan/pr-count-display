@@ -20,9 +20,10 @@ int InotifyWatch = -1;
 struct Text *PrCount, *PrHeader;
 struct Image *Logo;
 
-struct Text *HacktoberfestSponsors, *MeetupSponsors;
+struct Text *HacktoberfestSponsors, *MeetupSponsors, *MediaPatrons;
 struct Image *DOandDEV;
 struct Image *Sonalake, *Allegro;
+struct Image *PoIT, *OSWorld, *Linuxiarze;
 
 #define WATCHED_FILE_NAME "/tmp/pr-counter"
 
@@ -122,6 +123,15 @@ void init_libs(void) {
 	Allegro = image_load("assets/allegro.png");
 	if(Allegro == NULL) exit(EXIT_FAILURE);
 
+	PoIT = image_load("assets/poit.png");
+	if(PoIT == NULL) exit(EXIT_FAILURE);
+
+	OSWorld = image_load("assets/osworld.png");
+	if(OSWorld == NULL) exit(EXIT_FAILURE);
+
+	Linuxiarze = image_load("assets/linuxiarze.png");
+	if(Linuxiarze == NULL) exit(EXIT_FAILURE);
+
 	PrCount = text_init(Window.h / 5);
 	if(PrCount == NULL) exit(EXIT_FAILURE);
 
@@ -131,11 +141,15 @@ void init_libs(void) {
 	MeetupSponsors = text_init(Window.h / 12);
 	if(MeetupSponsors == NULL) exit(EXIT_FAILURE);
 	
+	MediaPatrons = text_init(Window.h / 12);
+	if(MediaPatrons == NULL) exit(EXIT_FAILURE);
+	
 	HacktoberfestSponsors = text_init(Window.h / 12);
 	if(HacktoberfestSponsors == NULL) exit(EXIT_FAILURE);
 	
 	text_renderString(PrHeader, TextColour, "Pull Request count:");
 	text_renderString(MeetupSponsors, TextColour, "POZNAN MEETUP SPONSORS");
+	text_renderString(MediaPatrons, TextColour, "MEDIA PATRONS");
 	text_renderString(HacktoberfestSponsors, TextColour, "HACKTOBERFEST SPONSORS");
 }
 
@@ -184,7 +198,7 @@ void draw_meetup_sponsors(void) {
 	sonaDest.h = Window.h / 9;
 	sonaDest.w = sonaDest.h * Sonalake->w / Sonalake->h;
 
-	alleDest.h = (Window.h / 9) * 1.1; // make Allegro slightly larger
+	alleDest.h = (Window.h / 9) * 11 / 10; // make Allegro slightly larger
 	alleDest.w = alleDest.h * Allegro->w / Allegro->h;
 
 	const int center = Window.w / 2 + (sonaDest.w - alleDest.w) / 2;
@@ -193,7 +207,7 @@ void draw_meetup_sponsors(void) {
 	sonaDest.y = Window.h - (Window.h / 10) - sonaDest.h;
 
 	alleDest.x = center + (Window.w / 20);
-	alleDest.y = Window.h - (Window.h / 10) - (alleDest.h * 0.9);
+	alleDest.y = Window.h - (Window.h / 10) - (alleDest.h * 9 / 10);
 
 	SDL_RenderCopy(Window.renderer, Sonalake->tex, NULL, &sonaDest);
 	SDL_RenderCopy(Window.renderer, Allegro->tex, NULL, &alleDest);
@@ -205,6 +219,43 @@ void draw_meetup_sponsors(void) {
 		.h = MeetupSponsors->h
 	};
 	SDL_RenderCopy(Window.renderer, MeetupSponsors->tex, NULL, &headerDest);
+}
+
+void draw_media_patrons(void) {
+	SDL_Rect poitDest, oswDest, linDest;
+
+	linDest.w = Window.w / 4;
+	linDest.h = linDest.w * Linuxiarze->h / Linuxiarze->w;
+
+	oswDest.w = Window.w / 4;
+	oswDest.h = oswDest.w * OSWorld->h / OSWorld->w;
+
+	poitDest.h = linDest.h * 5 / 3;
+	poitDest.w = poitDest.h * PoIT->w / PoIT->h;
+
+	linDest.y = Window.h - (Window.h / 10) - linDest.h;
+	oswDest.y = Window.h - (Window.h / 10) - oswDest.h;
+	poitDest.y = Window.h - (Window.h / 10) - (poitDest.h * 4 / 5);
+
+	const int spaceLeft = Window.w - poitDest.w - oswDest.w - linDest.w;
+	const int spacing = spaceLeft / 6;
+	const int margin = spacing * 2;
+
+	poitDest.x = margin;
+	oswDest.x = poitDest.x + poitDest.w + spacing;
+	linDest.x = oswDest.x + oswDest.w + spacing;
+
+	SDL_RenderCopy(Window.renderer, PoIT->tex, NULL, &poitDest);
+	SDL_RenderCopy(Window.renderer, OSWorld->tex, NULL, &oswDest);
+	SDL_RenderCopy(Window.renderer, Linuxiarze->tex, NULL, &linDest);
+
+	SDL_Rect headerDest = (SDL_Rect){
+		.x = (Window.w - MediaPatrons->w) / 2,
+		.y = poitDest.y - MediaPatrons->h - (MediaPatrons->h / 5),
+		.w = MediaPatrons->w,
+		.h = MediaPatrons->h
+	};
+	SDL_RenderCopy(Window.renderer, MediaPatrons->tex, NULL, &headerDest);
 }
 
 void draw_hacktoberfest_sponsors(void) {
@@ -238,10 +289,11 @@ void draw_frame(void) {
 	SDL_RenderCopy(Window.renderer, Logo->tex, NULL, &dest);
 
 	Uint32 seconds = SDL_GetTicks() / 1000;
-	switch((seconds / 2) % 3){
+	switch((seconds / 2) % 4){
 		case 0: draw_counter(); break;
 		case 1: draw_meetup_sponsors(); break;
-		case 2: draw_hacktoberfest_sponsors(); break;
+		case 2: draw_media_patrons(); break;
+		case 3: draw_hacktoberfest_sponsors(); break;
 	}
 
 	SDL_RenderPresent(Window.renderer);
