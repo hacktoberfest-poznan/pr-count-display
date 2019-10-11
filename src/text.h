@@ -19,5 +19,6 @@ extern struct Text *text_init(const int fontSize);
 extern void text_free(struct Text *text);
 
 extern int text_render(struct Text *text, const SDL_Colour colour);
+extern int text_renderString(struct Text *text, const SDL_Colour colour, const char *const string);
 
 #endif

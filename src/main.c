@@ -129,8 +129,7 @@ void init_libs(void) {
 	Header = text_init(Window.h / 10);
 	if(Header == NULL) exit(EXIT_FAILURE);
 	
-	strcpy(Header->buffer, "Pull Request count:");
-	text_render(Header, TextColour);
+	text_renderString(Header, TextColour, "Pull Request count:");
 }
 
 int quit_requested(void) {

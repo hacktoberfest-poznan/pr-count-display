@@ -1,5 +1,7 @@
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "text.h"
 #include "window.h"
@@ -63,4 +65,16 @@ int text_render(struct Text *text, const SDL_Colour colour) {
 	}
 
 	return 1;
+}
+
+int text_renderString(struct Text *text, const SDL_Colour colour, const char *const string) {
+	size_t length = strlen(string) + 1;
+	if(length >= TEXT_BUFFER_SIZE) {
+		memcpy(text->buffer, string, TEXT_BUFFER_SIZE - 1);
+		text->buffer[TEXT_BUFFER_SIZE-1] = '\0';
+	} else {
+		memcpy(text->buffer, string, length);
+	}
+
+	return text_render(text, colour);
 }
