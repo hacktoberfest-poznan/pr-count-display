@@ -61,7 +61,7 @@ void draw_logo(void) {
 
 	SDL_Rect logoDest = (SDL_Rect) {
 		.x = (WINDOW_W - Logo->w) / 2,
-		.y = 0,
+		.y = -24,
 		.w = Logo->w,
 		.h = Logo->h
 	};
