@@ -13,6 +13,8 @@ SDL_Renderer *Renderer = NULL;
 TTF_Font *Font = NULL;
 SDL_Texture *FontTex = NULL;
 
+SDL_Texture *Logo = NULL;
+
 #define INIT_SDL_FLAGS (SDL_INIT_EVENTS | SDL_INIT_TIMER | SDL_INIT_VIDEO)
 #define INIT_IMG_FLAGS (IMG_INIT_JPG | IMG_INIT_PNG)
 
@@ -58,6 +60,18 @@ void init_libs(void) {
 	if(Renderer == NULL) {
 		fprintf(stderr, "SDL_CreateRenderer() failed: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
+	}
+
+	SDL_Surface *surf = IMG_Load("assets/logo1920.png");
+	if(surf == NULL) {
+		fprintf(stderr, "IMG_Load() failed: %s\n", IMG_GetError());
+		exit(EXIT_FAILURE);
+	}
+
+	Logo = SDL_CreateTextureFromSurface(Renderer, surf);
+	SDL_FreeSurface(surf);
+	if(Logo == NULL) {
+		fprintf(stderr, "SDL_CreateTextureFromSurface() failed: %s\n", SDL_GetError());
 	}
 
 	int height;
@@ -109,13 +123,26 @@ void draw_frame(void) {
 	int windowW, windowH;
 	SDL_GetWindowSize(Window, &windowW, &windowH);
 
+	if(Logo != NULL) {
+		int logoW, logoH;
+		SDL_QueryTexture(Logo, NULL, NULL, &logoW, &logoH);
+
+		SDL_Rect dest = (SDL_Rect) {
+			.x = (windowW - logoW) / 2,
+			.y = 0,
+			.w = logoW,
+			.h = logoH
+		};
+		SDL_RenderCopy(Renderer, Logo, NULL, &dest);
+	}
+
 	if(FontTex != NULL) {
 		int textW, textH;
 		SDL_QueryTexture(FontTex, NULL, NULL, &textW, &textH);
 
 		SDL_Rect dest = (SDL_Rect) {
 			.x = (windowW - textW) / 2,
-			.y = windowH - textH - (windowH / 10),
+			.y = windowH - textH - (windowH / 20),
 			.w = textW,
 			.h = textH
 		};
