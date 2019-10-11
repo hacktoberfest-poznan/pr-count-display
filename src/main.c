@@ -169,11 +169,16 @@ void draw_frame(void) {
 	draw_logo();
 
 	Uint32 seconds = SDL_GetTicks() / 1000;
-	switch((seconds / 2) % 4){
-		case 0: draw_counter(); break;
-		case 1: draw_meetup_sponsors(); break;
-		case 2: draw_media_patrons(); break;
-		case 3: draw_hacktoberfest_sponsors(); break;
+	switch((seconds / 5) % 6){
+		case 0:
+		case 1:
+		case 2:
+			draw_counter();
+		break;
+
+		case 3: draw_meetup_sponsors(); break;
+		case 4: draw_media_patrons(); break;
+		case 5: draw_hacktoberfest_sponsors(); break;
 	}
 
 	SDL_RenderPresent(Window.renderer);
