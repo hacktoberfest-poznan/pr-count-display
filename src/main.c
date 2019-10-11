@@ -1,3 +1,4 @@
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -6,9 +7,11 @@
 #include <SDL2/SDL_ttf.h>
 
 
-SDL_Window *Window;
-SDL_Renderer *Renderer;
+SDL_Window *Window = NULL;
+SDL_Renderer *Renderer = NULL;
 
+TTF_Font *Font = NULL;
+SDL_Texture *FontTex = NULL;
 
 #define INIT_SDL_FLAGS (SDL_INIT_EVENTS | SDL_INIT_TIMER | SDL_INIT_VIDEO)
 #define INIT_IMG_FLAGS (IMG_INIT_JPG | IMG_INIT_PNG)
@@ -17,6 +20,7 @@ SDL_Renderer *Renderer;
 #define FPS_TICKS (1000 / FPS_MINIMUM)
 
 const SDL_Colour BackgroundColour = { .r = 0x15, .g = 0x23, .b = 0x47, .a = 255 };
+const SDL_Colour TextColour = { .r = 0xff, .g = 0xf9, .b = 0x22, .a = 255 };
 
 void init_libs(void) {
 	int err;
@@ -55,6 +59,15 @@ void init_libs(void) {
 		fprintf(stderr, "SDL_CreateRenderer() failed: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
+
+	int height;
+	SDL_GetWindowSize(Window, NULL, &height);
+
+	Font = TTF_OpenFont("assets/Orbitron-Regular.ttf", height / 5);
+	if(Font == NULL) {
+		fprintf(stderr, "TTF_OpenFont() failed: %s\n", TTF_GetError());
+		exit(EXIT_FAILURE);
+	}
 }
 
 int quit_requested(void) {
@@ -69,13 +82,53 @@ int quit_requested(void) {
 	return 0;
 }
 
+void renderText(void) {
+	if(FontTex != NULL) {
+		SDL_DestroyTexture(FontTex);
+		FontTex = NULL;
+	}
+
+	SDL_Surface *surf = TTF_RenderUTF8_Blended(Font, "0", TextColour);
+	if(surf == NULL) {
+		fprintf(stderr, "TTF_RenderUTF8_Blended() failed: %s\n", TTF_GetError());
+		return;
+	}
+
+	FontTex = SDL_CreateTextureFromSurface(Renderer, surf);
+	SDL_FreeSurface(surf);
+	
+	if(FontTex == NULL) {
+		fprintf(stderr, "SDL_CreateTextureFromSurface() failed: %s\n", SDL_GetError());
+	}
+}
+
 void draw_frame(void) {
 	SDL_SetRenderDrawColor(Renderer, BackgroundColour.r, BackgroundColour.g, BackgroundColour.b, BackgroundColour.a);
 	SDL_RenderClear(Renderer);
+
+	int windowW, windowH;
+	SDL_GetWindowSize(Window, &windowW, &windowH);
+
+	if(FontTex != NULL) {
+		int textW, textH;
+		SDL_QueryTexture(FontTex, NULL, NULL, &textW, &textH);
+
+		SDL_Rect dest = (SDL_Rect) {
+			.x = (windowW - textW) / 2,
+			.y = windowH - textH - (windowH / 10),
+			.w = textW,
+			.h = textH
+		};
+		SDL_RenderCopy(Renderer, FontTex, NULL, &dest);
+	}
+
 	SDL_RenderPresent(Renderer);
 }
 
 void deinit_libs(void) {
+	SDL_DestroyTexture(FontTex);
+	TTF_CloseFont(Font);
+
 	SDL_DestroyRenderer(Renderer);
 	SDL_DestroyWindow(Window);
 
@@ -88,6 +141,7 @@ int main(void) {
 	init_libs();
 	SDL_ShowWindow(Window);
 
+	renderText();
 	while(!quit_requested()) {
 		draw_frame();
 		SDL_Delay(FPS_TICKS);
