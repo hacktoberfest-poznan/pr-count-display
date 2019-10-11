@@ -17,8 +17,11 @@
 int InotifyFD = -1;
 int InotifyWatch = -1;
 
-struct Text *PrCount, *Header;
+struct Text *PrCount, *PrHeader;
 struct Image *Logo;
+
+struct Text *HacktoberfestSponsors;
+struct Image *DOandDEV;
 
 #define WATCHED_FILE_NAME "/tmp/pr-counter"
 
@@ -109,13 +112,21 @@ void init_libs(void) {
 	Logo = image_load("assets/logo1920.png");
 	if(Logo == NULL) exit(EXIT_FAILURE);
 
+	DOandDEV = image_load("assets/DO-and-DEV.png");
+	if(DOandDEV == NULL) exit(EXIT_FAILURE);
+
 	PrCount = text_init(Window.h / 5);
 	if(PrCount == NULL) exit(EXIT_FAILURE);
 
-	Header = text_init(Window.h / 10);
-	if(Header == NULL) exit(EXIT_FAILURE);
+	PrHeader = text_init(Window.h / 10);
+	if(PrHeader == NULL) exit(EXIT_FAILURE);
 	
-	text_renderString(Header, TextColour, "Pull Request count:");
+	
+	HacktoberfestSponsors = text_init(Window.h / 12);
+	if(HacktoberfestSponsors == NULL) exit(EXIT_FAILURE);
+	
+	text_renderString(PrHeader, TextColour, "Pull Request count:");
+	text_renderString(HacktoberfestSponsors, TextColour, "HACKTOBERFEST SPONSORS");
 }
 
 int quit_requested(void) {
@@ -135,38 +146,62 @@ int quit_requested(void) {
 	return 0;
 }
 
+void draw_counter(void) {
+	if(PrCount->tex == NULL) return;
+
+	SDL_Rect countDest = (SDL_Rect){
+		.x = (Window.w - PrCount->w) / 2,
+		.y = Window.h - PrCount->h - (Window.h / 25),
+		.w = PrCount->w,
+		.h = PrCount->h
+	};
+	SDL_RenderCopy(Window.renderer, PrCount->tex, NULL, &countDest);
+
+	if(PrHeader->tex == NULL) return;
+
+	SDL_Rect headerDest = (SDL_Rect){
+		.x = (Window.w - PrHeader->w) / 2,
+		.y = countDest.y - PrHeader->h - (PrHeader->h / 5),
+		.w = PrHeader->w,
+		.h = PrHeader->h
+	};
+	SDL_RenderCopy(Window.renderer, PrHeader->tex, NULL, &headerDest);
+}
+
+void draw_hacktoberfest_sponsors(void) {
+	SDL_Rect imageDest = (SDL_Rect){
+		.x = (Window.w - DOandDEV->w) / 2,
+		.y = Window.h - (Window.h / 10) - DOandDEV->h,
+		.w = DOandDEV->w,
+		.h = DOandDEV->h
+	};
+	SDL_RenderCopy(Window.renderer, DOandDEV->tex, NULL, &imageDest);
+
+	SDL_Rect headerDest = (SDL_Rect){
+		.x = (Window.w - HacktoberfestSponsors->w) / 2,
+		.y = imageDest.y - HacktoberfestSponsors->h - (HacktoberfestSponsors->h / 5),
+		.w = HacktoberfestSponsors->w,
+		.h = HacktoberfestSponsors->h
+	};
+	SDL_RenderCopy(Window.renderer, HacktoberfestSponsors->tex, NULL, &headerDest);
+}
+
 void draw_frame(void) {
 	SDL_SetRenderDrawColor(Window.renderer, BackgroundColour.r, BackgroundColour.g, BackgroundColour.b, BackgroundColour.a);
 	SDL_RenderClear(Window.renderer);
 
-	if(Logo != NULL) {
-		SDL_Rect dest = (SDL_Rect) {
-			.x = (Window.w - Logo->w) / 2,
-			.y = 0,
-			.w = Logo->w,
-			.h = Logo->h
-		};
-		SDL_RenderCopy(Window.renderer, Logo->tex, NULL, &dest);
-	}
+	SDL_Rect dest = (SDL_Rect) {
+		.x = (Window.w - Logo->w) / 2,
+		.y = 0,
+		.w = Logo->w,
+		.h = Logo->h
+	};
+	SDL_RenderCopy(Window.renderer, Logo->tex, NULL, &dest);
 
-	if(PrCount->tex != NULL) {
-		SDL_Rect countDest = (SDL_Rect) {
-			.x = (Window.w - PrCount->w) / 2,
-			.y = Window.h - PrCount->h - (Window.h / 25),
-			.w = PrCount->w,
-			.h = PrCount->h
-		};
-		SDL_RenderCopy(Window.renderer, PrCount->tex, NULL, &countDest);
-
-		if(Header->tex != NULL) {
-			SDL_Rect headerDest = (SDL_Rect) {
-				.x = (Window.w - Header->w) / 2,
-				.y = countDest.y - Header->h - (Header->h / 5),
-				.w = Header->w,
-				.h = Header->h
-			};
-			SDL_RenderCopy(Window.renderer, Header->tex, NULL, &headerDest);
-		}
+	Uint32 seconds = SDL_GetTicks() / 1000;
+	switch((seconds / 2) % 2){
+		case 0: draw_counter(); break;
+		case 1: draw_hacktoberfest_sponsors(); break;
 	}
 
 	SDL_RenderPresent(Window.renderer);
@@ -207,7 +242,7 @@ int check_inotify(void) {
 void deinit_libs(void) {
 	image_free(Logo);
 	text_free(PrCount);
-	text_free(Header);
+	text_free(PrHeader);
 
 	SDL_DestroyRenderer(Window.renderer);
 	SDL_DestroyWindow(Window.window);

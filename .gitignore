@@ -3,9 +3,11 @@
 *.o
 *.h.gch
 build/
+cmake*/
 
 # Other
 var/
+*.bak
 *.swp
 *.*~
 
