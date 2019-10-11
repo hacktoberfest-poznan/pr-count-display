@@ -20,8 +20,9 @@ int InotifyWatch = -1;
 struct Text *PrCount, *PrHeader;
 struct Image *Logo;
 
-struct Text *HacktoberfestSponsors;
+struct Text *HacktoberfestSponsors, *MeetupSponsors;
 struct Image *DOandDEV;
+struct Image *Sonalake, *Allegro;
 
 #define WATCHED_FILE_NAME "/tmp/pr-counter"
 
@@ -115,17 +116,26 @@ void init_libs(void) {
 	DOandDEV = image_load("assets/DO-and-DEV.png");
 	if(DOandDEV == NULL) exit(EXIT_FAILURE);
 
+	Sonalake = image_load("assets/sonalake.png");
+	if(Sonalake == NULL) exit(EXIT_FAILURE);
+
+	Allegro = image_load("assets/allegro.png");
+	if(Allegro == NULL) exit(EXIT_FAILURE);
+
 	PrCount = text_init(Window.h / 5);
 	if(PrCount == NULL) exit(EXIT_FAILURE);
 
 	PrHeader = text_init(Window.h / 10);
 	if(PrHeader == NULL) exit(EXIT_FAILURE);
 	
+	MeetupSponsors = text_init(Window.h / 12);
+	if(MeetupSponsors == NULL) exit(EXIT_FAILURE);
 	
 	HacktoberfestSponsors = text_init(Window.h / 12);
 	if(HacktoberfestSponsors == NULL) exit(EXIT_FAILURE);
 	
 	text_renderString(PrHeader, TextColour, "Pull Request count:");
+	text_renderString(MeetupSponsors, TextColour, "POZNAN MEETUP SPONSORS");
 	text_renderString(HacktoberfestSponsors, TextColour, "HACKTOBERFEST SPONSORS");
 }
 
@@ -168,6 +178,35 @@ void draw_counter(void) {
 	SDL_RenderCopy(Window.renderer, PrHeader->tex, NULL, &headerDest);
 }
 
+void draw_meetup_sponsors(void) {
+	SDL_Rect sonaDest, alleDest;
+
+	sonaDest.h = Window.h / 9;
+	sonaDest.w = sonaDest.h * Sonalake->w / Sonalake->h;
+
+	alleDest.h = (Window.h / 9) * 1.1; // make Allegro slightly larger
+	alleDest.w = alleDest.h * Allegro->w / Allegro->h;
+
+	const int center = Window.w / 2 + (sonaDest.w - alleDest.w) / 2;
+
+	sonaDest.x = center - (Window.w / 20) - sonaDest.w;
+	sonaDest.y = Window.h - (Window.h / 10) - sonaDest.h;
+
+	alleDest.x = center + (Window.w / 20);
+	alleDest.y = Window.h - (Window.h / 10) - (alleDest.h * 0.9);
+
+	SDL_RenderCopy(Window.renderer, Sonalake->tex, NULL, &sonaDest);
+	SDL_RenderCopy(Window.renderer, Allegro->tex, NULL, &alleDest);
+
+	SDL_Rect headerDest = (SDL_Rect){
+		.x = (Window.w - MeetupSponsors->w) / 2,
+		.y = (alleDest.y < sonaDest.y ? alleDest.y : sonaDest.y) - MeetupSponsors->h - (MeetupSponsors->h / 5),
+		.w = MeetupSponsors->w,
+		.h = MeetupSponsors->h
+	};
+	SDL_RenderCopy(Window.renderer, MeetupSponsors->tex, NULL, &headerDest);
+}
+
 void draw_hacktoberfest_sponsors(void) {
 	SDL_Rect imageDest = (SDL_Rect){
 		.x = (Window.w - DOandDEV->w) / 2,
@@ -199,9 +238,10 @@ void draw_frame(void) {
 	SDL_RenderCopy(Window.renderer, Logo->tex, NULL, &dest);
 
 	Uint32 seconds = SDL_GetTicks() / 1000;
-	switch((seconds / 2) % 2){
+	switch((seconds / 2) % 3){
 		case 0: draw_counter(); break;
-		case 1: draw_hacktoberfest_sponsors(); break;
+		case 1: draw_meetup_sponsors(); break;
+		case 2: draw_hacktoberfest_sponsors(); break;
 	}
 
 	SDL_RenderPresent(Window.renderer);
