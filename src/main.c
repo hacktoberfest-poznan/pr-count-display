@@ -1,11 +1,17 @@
+#include <errno.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/inotify.h>
+#include <unistd.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
 
+
+int InotifyFD = -1;
+int InotifyWatch = -1;
 
 SDL_Window *Window = NULL;
 SDL_Renderer *Renderer = NULL;
@@ -15,6 +21,8 @@ SDL_Texture *FontTex = NULL;
 
 SDL_Texture *Logo = NULL;
 
+#define WATCHED_FILE_NAME "/tmp/pr-counter"
+
 #define INIT_SDL_FLAGS (SDL_INIT_EVENTS | SDL_INIT_TIMER | SDL_INIT_VIDEO)
 #define INIT_IMG_FLAGS (IMG_INIT_JPG | IMG_INIT_PNG)
 
@@ -23,6 +31,20 @@ SDL_Texture *Logo = NULL;
 
 const SDL_Colour BackgroundColour = { .r = 0x15, .g = 0x23, .b = 0x47, .a = 255 };
 const SDL_Colour TextColour = { .r = 0xff, .g = 0xf9, .b = 0x22, .a = 255 };
+
+void init_inotify(void) {
+	InotifyFD = inotify_init1(IN_NONBLOCK);
+	if(InotifyFD == -1) {
+		perror("inotify_init1() failed");
+		exit(EXIT_FAILURE);
+	}
+
+	InotifyWatch = inotify_add_watch(InotifyFD, WATCHED_FILE_NAME, IN_MODIFY);
+	if(InotifyWatch == -1) {
+		perror("inotify_add_watch() failed");
+		exit(EXIT_FAILURE);
+	}
+}
 
 void init_libs(void) {
 	int err;
@@ -96,13 +118,13 @@ int quit_requested(void) {
 	return 0;
 }
 
-void renderText(void) {
+void renderText(const char *const buffer) {
 	if(FontTex != NULL) {
 		SDL_DestroyTexture(FontTex);
 		FontTex = NULL;
 	}
 
-	SDL_Surface *surf = TTF_RenderUTF8_Blended(Font, "0", TextColour);
+	SDL_Surface *surf = TTF_RenderUTF8_Blended(Font, buffer, TextColour);
 	if(surf == NULL) {
 		fprintf(stderr, "TTF_RenderUTF8_Blended() failed: %s\n", TTF_GetError());
 		return;
@@ -152,6 +174,40 @@ void draw_frame(void) {
 	SDL_RenderPresent(Renderer);
 }
 
+void read_file_contents(char *const buffer, const size_t bufsize) {
+	FILE *f = fopen(WATCHED_FILE_NAME, "r");
+	if(f == NULL) {
+		perror("fopen() failed");
+		return;
+	}
+
+	char *ret = fgets(buffer, bufsize, f);
+	fclose(f);
+
+	if(ret == NULL) {
+		perror("fgets() failed");
+		return;
+	}
+
+	size_t len = strlen(buffer);
+	while(len > 0 && buffer[len-1] <= ' ') {
+		buffer[--len] = '\0';
+	}
+}
+
+int check_inotify(void) {
+	int any_changes = 0;
+
+	struct inotify_event inev;
+	ssize_t bytes;
+
+	while((bytes = read(InotifyFD, &inev, sizeof(struct inotify_event))) > 0) {
+		any_changes = 1;
+	}
+
+	return any_changes;
+}
+
 void deinit_libs(void) {
 	SDL_DestroyTexture(FontTex);
 	TTF_CloseFont(Font);
@@ -165,11 +221,20 @@ void deinit_libs(void) {
 }
 
 int main(void) {
+	init_inotify();
 	init_libs();
 	SDL_ShowWindow(Window);
 
-	renderText();
+	char textBuffer[256];
+	read_file_contents(textBuffer, sizeof(textBuffer));
+	renderText(textBuffer);
+	
 	while(!quit_requested()) {
+		if(check_inotify()) {
+			read_file_contents(textBuffer, sizeof(textBuffer));
+			renderText(textBuffer);
+		}
+
 		draw_frame();
 		SDL_Delay(FPS_TICKS);
 	}
