@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <fcntl.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,8 +57,29 @@ void init_inotify(void) {
 
 	InotifyWatch = inotify_add_watch(InotifyFD, WATCHED_FILE_NAME, IN_MODIFY);
 	if(InotifyWatch == -1) {
-		perror("inotify_add_watch() failed");
-		exit(EXIT_FAILURE);
+		if(errno != ENOENT) {
+			perror("inotify_add_watch() failed");
+			exit(EXIT_FAILURE);
+		}
+
+		FILE *f = fopen(WATCHED_FILE_NAME, "w");
+		if(f == NULL) {
+			perror("fopen() failed");
+			exit(EXIT_FAILURE);
+		}
+
+		if(fwrite("0\n", 1, 2, f) < 2) {
+			perror("fwrite() failed");
+			exit(EXIT_FAILURE);
+		}
+
+		fclose(f); // Ignore close failures
+
+		InotifyWatch = inotify_add_watch(InotifyFD, WATCHED_FILE_NAME, IN_MODIFY);
+		if(InotifyWatch == -1) {
+			perror("inotify_add_watch() failed");
+			exit(EXIT_FAILURE);
+		}
 	}
 }
 
