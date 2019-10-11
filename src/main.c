@@ -13,6 +13,7 @@
 #include "image.h"
 #include "screens.h"
 #include "text.h"
+#include "utils.h"
 #include "window.h"
 
 int InotifyFD = -1;
@@ -162,6 +163,9 @@ int quit_requested(void) {
 	return 0;
 }
 
+#define TICKS_PER_SCREEN 5000
+#define TRANSITION_TICKS 500
+
 void draw_frame(void) {
 	SDL_SetRenderDrawColor(Window.renderer, 0, 0, 0, 255);
 	SDL_RenderClear(Window.renderer);
@@ -172,17 +176,39 @@ void draw_frame(void) {
 	draw_logo();
 	draw_clock();
 
-	Uint32 seconds = SDL_GetTicks() / 1000;
-	switch((seconds / 5) % 6){
-		case 0:
-		case 1:
-		case 2:
-			draw_counter();
-		break;
+	void (*screens[])(void) = {
+		&draw_counter,
+		&draw_meetup_sponsors,
+		&draw_media_patrons,
+		&draw_hacktoberfest_sponsors,
+		&draw_counter,
+		&draw_counter,
+	};
+	#define SCREEN_COUNT  (sizeof(screens) / sizeof(void*))
 
-		case 3: draw_meetup_sponsors(); break;
-		case 4: draw_media_patrons(); break;
-		case 5: draw_hacktoberfest_sponsors(); break;
+	Uint32 ticks = SDL_GetTicks();
+	int screenNo = (ticks / TICKS_PER_SCREEN) % 6;
+	int millis = ticks % TICKS_PER_SCREEN;
+
+	void (*screen1)(void) = screens[screenNo];
+	void (*screen2)(void) = screens[(screenNo + 1) % SCREEN_COUNT];
+
+	if((screen1 != screen2) && (millis >= TICKS_PER_SCREEN - TRANSITION_TICKS)) {
+		float transition = progress(millis, TICKS_PER_SCREEN - TRANSITION_TICKS, TICKS_PER_SCREEN);
+
+		SDL_Rect vp_normal = (SDL_Rect){ .x = 0, .y = 0, .w = WINDOW_W, .h = WINDOW_H };
+
+		SDL_Rect vp_old = vp_normal, vp_new = vp_normal;
+		vp_old.x = transition * -WINDOW_W;
+		vp_new.x = WINDOW_W + vp_old.x;
+
+		SDL_RenderSetViewport(Window.renderer, &vp_old);
+		screen1();
+		SDL_RenderSetViewport(Window.renderer, &vp_new);
+		screen2();
+		SDL_RenderSetViewport(Window.renderer, &vp_normal);
+	} else {
+		screen1();
 	}
 
 	SDL_RenderPresent(Window.renderer);
