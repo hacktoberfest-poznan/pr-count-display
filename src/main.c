@@ -10,27 +10,13 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
 
+#include "text.h"
+#include "window.h"
 
 int InotifyFD = -1;
 int InotifyWatch = -1;
 
-struct {
-	SDL_Window *window;
-	SDL_Renderer *renderer;
-
-	int w, h;
-} Window;
-
-#define TEXT_BUFFER_SIZE 256
-
-struct {
-	TTF_Font *ttf;
-
-	char buffer[TEXT_BUFFER_SIZE];
-
-	SDL_Texture *tex;
-	int w, h;
-} Text;
+struct Text *PrCount, *Header;
 
 struct {
 	SDL_Texture *tex;
@@ -137,11 +123,14 @@ void init_libs(void) {
 		fprintf(stderr, "SDL_CreateTextureFromSurface() failed: %s\n", SDL_GetError());
 	}
 
-	Text.ttf = TTF_OpenFont("assets/Orbitron-Regular.ttf", Window.h / 5);
-	if(Text.ttf == NULL) {
-		fprintf(stderr, "TTF_OpenFont() failed: %s\n", TTF_GetError());
-		exit(EXIT_FAILURE);
-	}
+	PrCount = text_init(Window.h / 5);
+	if(PrCount == NULL) exit(EXIT_FAILURE);
+
+	Header = text_init(Window.h / 10);
+	if(Header == NULL) exit(EXIT_FAILURE);
+	
+	strcpy(Header->buffer, "Pull Request count:");
+	text_render(Header, TextColour);
 }
 
 int quit_requested(void) {
@@ -161,28 +150,6 @@ int quit_requested(void) {
 	return 0;
 }
 
-void renderText(void) {
-	if(Text.tex != NULL) {
-		SDL_DestroyTexture(Text.tex);
-		Text.tex = NULL;
-	}
-
-	SDL_Surface *surf = TTF_RenderUTF8_Blended(Text.ttf, Text.buffer, TextColour);
-	if(surf == NULL) {
-		fprintf(stderr, "TTF_RenderUTF8_Blended() failed: %s\n", TTF_GetError());
-		return;
-	}
-
-	Text.w = surf->w;
-	Text.h = surf->h;
-	Text.tex = SDL_CreateTextureFromSurface(Window.renderer, surf);
-	SDL_FreeSurface(surf);
-	
-	if(Text.tex == NULL) {
-		fprintf(stderr, "SDL_CreateTextureFromSurface() failed: %s\n", SDL_GetError());
-	}
-}
-
 void draw_frame(void) {
 	SDL_SetRenderDrawColor(Window.renderer, BackgroundColour.r, BackgroundColour.g, BackgroundColour.b, BackgroundColour.a);
 	SDL_RenderClear(Window.renderer);
@@ -197,14 +164,24 @@ void draw_frame(void) {
 		SDL_RenderCopy(Window.renderer, Logo.tex, NULL, &dest);
 	}
 
-	if(Text.tex != NULL) {
-		SDL_Rect dest = (SDL_Rect) {
-			.x = (Window.w - Text.w) / 2,
-			.y = Window.h - Text.h - (Window.h / 20),
-			.w = Text.w,
-			.h = Text.h
+	if(PrCount->tex != NULL) {
+		SDL_Rect countDest = (SDL_Rect) {
+			.x = (Window.w - PrCount->w) / 2,
+			.y = Window.h - PrCount->h - (Window.h / 25),
+			.w = PrCount->w,
+			.h = PrCount->h
 		};
-		SDL_RenderCopy(Window.renderer, Text.tex, NULL, &dest);
+		SDL_RenderCopy(Window.renderer, PrCount->tex, NULL, &countDest);
+
+		if(Header->tex != NULL) {
+			SDL_Rect headerDest = (SDL_Rect) {
+				.x = (Window.w - Header->w) / 2,
+				.y = countDest.y - Header->h - (Header->h / 5),
+				.w = Header->w,
+				.h = Header->h
+			};
+			SDL_RenderCopy(Window.renderer, Header->tex, NULL, &headerDest);
+		}
 	}
 
 	SDL_RenderPresent(Window.renderer);
@@ -217,7 +194,7 @@ void read_file_contents(void) {
 		return;
 	}
 
-	char *ret = fgets(Text.buffer, TEXT_BUFFER_SIZE, f);
+	char *ret = fgets(PrCount->buffer, TEXT_BUFFER_SIZE, f);
 	fclose(f);
 
 	if(ret == NULL) {
@@ -225,9 +202,9 @@ void read_file_contents(void) {
 		return;
 	}
 
-	size_t len = strlen(Text.buffer);
-	while(len > 0 && Text.buffer[len-1] <= ' ') {
-		Text.buffer[--len] = '\0';
+	size_t len = strlen(PrCount->buffer);
+	while(len > 0 && PrCount->buffer[len-1] <= ' ') {
+		PrCount->buffer[--len] = '\0';
 	}
 }
 
@@ -244,8 +221,8 @@ int check_inotify(void) {
 
 void deinit_libs(void) {
 	SDL_DestroyTexture(Logo.tex);
-	SDL_DestroyTexture(Text.tex);
-	TTF_CloseFont(Text.ttf);
+	text_free(PrCount);
+	text_free(Header);
 
 	SDL_DestroyRenderer(Window.renderer);
 	SDL_DestroyWindow(Window.window);
@@ -261,12 +238,12 @@ int main(void) {
 	SDL_ShowWindow(Window.window);
 
 	read_file_contents();
-	renderText();
+	text_render(PrCount, TextColour);
 	
 	while(!quit_requested()) {
 		if(check_inotify()) {
 			read_file_contents();
-			renderText();
+			text_render(PrCount, TextColour);
 		}
 
 		draw_frame();
