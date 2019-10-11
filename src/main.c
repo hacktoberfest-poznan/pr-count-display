@@ -88,7 +88,7 @@ void init_libs(void) {
 	Window.window = SDL_CreateWindow(
 		"Pull Request Count Display",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		0, 0,
+		WINDOW_W, WINDOW_H,
 		SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_HIDDEN
 	);
 	if(Window.window == NULL) {
@@ -96,15 +96,15 @@ void init_libs(void) {
 		exit(EXIT_FAILURE);
 	}
 
-	SDL_GetWindowSize(Window.window, &Window.w, &Window.h);
-
 	Window.renderer = SDL_CreateRenderer(Window.window, -1, SDL_RENDERER_ACCELERATED);
 	if(Window.renderer == NULL) {
 		fprintf(stderr, "SDL_CreateWindow.renderer() failed: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
 
-	Logo = image_load("assets/logo1920.png");
+	SDL_RenderSetLogicalSize(Window.renderer, WINDOW_W, WINDOW_H);
+
+	Logo = image_load("assets/logo1440.png");
 	if(Logo == NULL) exit(EXIT_FAILURE);
 
 	DOandDEV = image_load("assets/DO-and-DEV.png");
@@ -125,19 +125,19 @@ void init_libs(void) {
 	Linuxiarze = image_load("assets/linuxiarze.png");
 	if(Linuxiarze == NULL) exit(EXIT_FAILURE);
 
-	PrCount = text_init(Window.h / 5);
+	PrCount = text_init(WINDOW_H / 5);
 	if(PrCount == NULL) exit(EXIT_FAILURE);
 
-	PrHeader = text_init(Window.h / 10);
+	PrHeader = text_init(WINDOW_H / 10);
 	if(PrHeader == NULL) exit(EXIT_FAILURE);
 	
-	MeetupSponsors = text_init(Window.h / 12);
+	MeetupSponsors = text_init(WINDOW_H / 12);
 	if(MeetupSponsors == NULL) exit(EXIT_FAILURE);
 	
-	MediaPatrons = text_init(Window.h / 12);
+	MediaPatrons = text_init(WINDOW_H / 12);
 	if(MediaPatrons == NULL) exit(EXIT_FAILURE);
 	
-	HacktoberfestSponsors = text_init(Window.h / 12);
+	HacktoberfestSponsors = text_init(WINDOW_H / 12);
 	if(HacktoberfestSponsors == NULL) exit(EXIT_FAILURE);
 	
 	text_renderString(PrHeader, TextColour, "Pull Request count:");
@@ -153,22 +153,20 @@ int quit_requested(void) {
 			return 1;
 		if(ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_ESCAPE)
 			return 1;
-
-		if(ev.type == SDL_WINDOWEVENT && ev.window.type == SDL_WINDOWEVENT_RESIZED) {
-			Window.w = ev.window.data1;
-			Window.h = ev.window.data2;
-		}
 	}
 	
 	return 0;
 }
 
 void draw_frame(void) {
-	SDL_SetRenderDrawColor(Window.renderer, BackgroundColour.r, BackgroundColour.g, BackgroundColour.b, BackgroundColour.a);
+	SDL_SetRenderDrawColor(Window.renderer, 0, 0, 0, 255);
 	SDL_RenderClear(Window.renderer);
 
+	SDL_SetRenderDrawColor(Window.renderer, BackgroundColour.r, BackgroundColour.g, BackgroundColour.b, BackgroundColour.a);
+	SDL_RenderFillRect(Window.renderer, NULL);
+
 	SDL_Rect dest = (SDL_Rect) {
-		.x = (Window.w - Logo->w) / 2,
+		.x = (WINDOW_W - Logo->w) / 2,
 		.y = 0,
 		.w = Logo->w,
 		.h = Logo->h

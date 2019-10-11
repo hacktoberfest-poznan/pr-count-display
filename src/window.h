@@ -3,11 +3,12 @@
 
 #include <SDL2/SDL.h>
 
+#define WINDOW_W 1920
+#define WINDOW_H 1080
+
 struct Window {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
-
-	int w, h;
 };
 
 extern struct Window Window;
