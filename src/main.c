@@ -10,6 +10,7 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
 
+#include "image.h"
 #include "text.h"
 #include "window.h"
 
@@ -17,11 +18,7 @@ int InotifyFD = -1;
 int InotifyWatch = -1;
 
 struct Text *PrCount, *Header;
-
-struct {
-	SDL_Texture *tex;
-	int w, h;
-} Logo;
+struct Image *Logo;
 
 #define WATCHED_FILE_NAME "/tmp/pr-counter"
 
@@ -109,19 +106,8 @@ void init_libs(void) {
 		exit(EXIT_FAILURE);
 	}
 
-	SDL_Surface *surf = IMG_Load("assets/logo1920.png");
-	if(surf == NULL) {
-		fprintf(stderr, "IMG_Load() failed: %s\n", IMG_GetError());
-		exit(EXIT_FAILURE);
-	}
-
-	Logo.w = surf->w;
-	Logo.h = surf->h;
-	Logo.tex = SDL_CreateTextureFromSurface(Window.renderer, surf);
-	SDL_FreeSurface(surf);
-	if(Logo.tex == NULL) {
-		fprintf(stderr, "SDL_CreateTextureFromSurface() failed: %s\n", SDL_GetError());
-	}
+	Logo = image_load("assets/logo1920.png");
+	if(Logo == NULL) exit(EXIT_FAILURE);
 
 	PrCount = text_init(Window.h / 5);
 	if(PrCount == NULL) exit(EXIT_FAILURE);
@@ -153,14 +139,14 @@ void draw_frame(void) {
 	SDL_SetRenderDrawColor(Window.renderer, BackgroundColour.r, BackgroundColour.g, BackgroundColour.b, BackgroundColour.a);
 	SDL_RenderClear(Window.renderer);
 
-	if(Logo.tex != NULL) {
+	if(Logo != NULL) {
 		SDL_Rect dest = (SDL_Rect) {
-			.x = (Window.w - Logo.w) / 2,
+			.x = (Window.w - Logo->w) / 2,
 			.y = 0,
-			.w = Logo.w,
-			.h = Logo.h
+			.w = Logo->w,
+			.h = Logo->h
 		};
-		SDL_RenderCopy(Window.renderer, Logo.tex, NULL, &dest);
+		SDL_RenderCopy(Window.renderer, Logo->tex, NULL, &dest);
 	}
 
 	if(PrCount->tex != NULL) {
@@ -219,7 +205,7 @@ int check_inotify(void) {
 }
 
 void deinit_libs(void) {
-	SDL_DestroyTexture(Logo.tex);
+	image_free(Logo);
 	text_free(PrCount);
 	text_free(Header);
 
