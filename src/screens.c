@@ -7,7 +7,7 @@
 #include "window.h"
 
 struct Text *PrCount, *PrHeader;
-struct Image *Logo;
+struct Image *Logo, *CornerLeft, *CornerRight;
 
 struct Text *Clock;
 
@@ -15,6 +15,24 @@ struct Text *HacktoberfestSponsors, *MeetupSponsors, *MediaPatrons;
 struct Image *DOandDEV;
 struct Image *Sonalake, *Allegro;
 struct Image *PoIT, *OSWorld, *Linuxiarze;
+
+void draw_corners(void) {
+	SDL_Rect leftDest = (SDL_Rect){
+		.x = 0,
+		.y = WINDOW_H - CornerLeft->h,
+		.w = CornerLeft->w,
+		.h = CornerLeft->h
+	};
+	SDL_RenderCopy(Window.renderer, CornerLeft->tex, NULL, &leftDest);
+
+	SDL_Rect rightDest = (SDL_Rect){
+		.x = WINDOW_W - CornerRight->w,
+		.y = WINDOW_H - CornerRight->h,
+		.w = CornerRight->w,
+		.h = CornerRight->h
+	};
+	SDL_RenderCopy(Window.renderer, CornerRight->tex, NULL, &rightDest);
+}
 
 #define LOGO_HEARTBEAT_REST_TIME    5000
 #define LOGO_HEARTBEAT_BUILDUP_TIME  200

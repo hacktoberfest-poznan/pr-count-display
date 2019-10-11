@@ -5,7 +5,7 @@
 #include "text.h"
 
 extern struct Text *PrCount, *PrHeader;
-extern struct Image *Logo;
+extern struct Image *Logo, *CornerLeft, *CornerRight;
 
 extern struct Text *Clock;
 
@@ -14,8 +14,10 @@ extern struct Image *DOandDEV;
 extern struct Image *Sonalake, *Allegro;
 extern struct Image *PoIT, *OSWorld, *Linuxiarze;
 
+extern void draw_corners(void);
 extern void draw_logo(void);
 extern void draw_clock(void);
+
 extern void draw_counter(void);
 
 extern void draw_meetup_sponsors(void);

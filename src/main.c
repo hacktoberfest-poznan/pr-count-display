@@ -90,7 +90,7 @@ void init_libs(void) {
 		"Pull Request Count Display",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		WINDOW_W, WINDOW_H,
-		SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_HIDDEN
+		SDL_WINDOW_HIDDEN
 	);
 	if(Window.window == NULL) {
 		fprintf(stderr, "SDL_OpenWindow() failed: %s\n", SDL_GetError());
@@ -107,6 +107,12 @@ void init_libs(void) {
 
 	Logo = image_load("assets/logo1440.png");
 	if(Logo == NULL) exit(EXIT_FAILURE);
+
+	CornerLeft = image_load("assets/corner-left.png");
+	if(CornerLeft == NULL) exit(EXIT_FAILURE);
+
+	CornerRight = image_load("assets/corner-right.png");
+	if(CornerRight == NULL) exit(EXIT_FAILURE);
 
 	DOandDEV = image_load("assets/DO-and-DEV.png");
 	if(DOandDEV == NULL) exit(EXIT_FAILURE);
@@ -173,6 +179,7 @@ void draw_frame(void) {
 	SDL_SetRenderDrawColor(Window.renderer, BackgroundColour.r, BackgroundColour.g, BackgroundColour.b, BackgroundColour.a);
 	SDL_RenderFillRect(Window.renderer, NULL);
 
+	draw_corners();
 	draw_logo();
 	draw_clock();
 
@@ -187,7 +194,7 @@ void draw_frame(void) {
 	#define SCREEN_COUNT  (sizeof(screens) / sizeof(void*))
 
 	Uint32 ticks = SDL_GetTicks();
-	int screenNo = (ticks / TICKS_PER_SCREEN) % 6;
+	int screenNo = (ticks / TICKS_PER_SCREEN) % SCREEN_COUNT;
 	int millis = ticks % TICKS_PER_SCREEN;
 
 	void (*screen1)(void) = screens[screenNo];
