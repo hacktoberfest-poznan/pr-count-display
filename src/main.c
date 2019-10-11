@@ -13,13 +13,28 @@
 int InotifyFD = -1;
 int InotifyWatch = -1;
 
-SDL_Window *Window = NULL;
-SDL_Renderer *Renderer = NULL;
+struct {
+	SDL_Window *window;
+	SDL_Renderer *renderer;
 
-TTF_Font *Font = NULL;
-SDL_Texture *FontTex = NULL;
+	int w, h;
+} Window;
 
-SDL_Texture *Logo = NULL;
+#define TEXT_BUFFER_SIZE 256
+
+struct {
+	TTF_Font *ttf;
+
+	char buffer[TEXT_BUFFER_SIZE];
+
+	SDL_Texture *tex;
+	int w, h;
+} Text;
+
+struct {
+	SDL_Texture *tex;
+	int w, h;
+} Logo;
 
 #define WATCHED_FILE_NAME "/tmp/pr-counter"
 
@@ -67,20 +82,22 @@ void init_libs(void) {
 		exit(EXIT_FAILURE);
 	}
 
-	Window = SDL_CreateWindow(
+	Window.window = SDL_CreateWindow(
 		"Pull Request Count Display",
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		0, 0,
 		SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_HIDDEN
 	);
-	if(Window == NULL) {
+	if(Window.window == NULL) {
 		fprintf(stderr, "SDL_OpenWindow() failed: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
 
-	Renderer = SDL_CreateRenderer(Window, -1, SDL_RENDERER_ACCELERATED);
-	if(Renderer == NULL) {
-		fprintf(stderr, "SDL_CreateRenderer() failed: %s\n", SDL_GetError());
+	SDL_GetWindowSize(Window.window, &Window.w, &Window.h);
+
+	Window.renderer = SDL_CreateRenderer(Window.window, -1, SDL_RENDERER_ACCELERATED);
+	if(Window.renderer == NULL) {
+		fprintf(stderr, "SDL_CreateWindow.renderer() failed: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
 
@@ -90,17 +107,16 @@ void init_libs(void) {
 		exit(EXIT_FAILURE);
 	}
 
-	Logo = SDL_CreateTextureFromSurface(Renderer, surf);
+	Logo.w = surf->w;
+	Logo.h = surf->h;
+	Logo.tex = SDL_CreateTextureFromSurface(Window.renderer, surf);
 	SDL_FreeSurface(surf);
-	if(Logo == NULL) {
+	if(Logo.tex == NULL) {
 		fprintf(stderr, "SDL_CreateTextureFromSurface() failed: %s\n", SDL_GetError());
 	}
 
-	int height;
-	SDL_GetWindowSize(Window, NULL, &height);
-
-	Font = TTF_OpenFont("assets/Orbitron-Regular.ttf", height / 5);
-	if(Font == NULL) {
+	Text.ttf = TTF_OpenFont("assets/Orbitron-Regular.ttf", Window.h / 5);
+	if(Text.ttf == NULL) {
 		fprintf(stderr, "TTF_OpenFont() failed: %s\n", TTF_GetError());
 		exit(EXIT_FAILURE);
 	}
@@ -111,77 +127,75 @@ int quit_requested(void) {
 	while(SDL_PollEvent(&ev) > 0) {
 		if(ev.type == SDL_QUIT)
 			return 1;
-		else if(ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_ESCAPE)
+		if(ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_ESCAPE)
 			return 1;
+
+		if(ev.type == SDL_WINDOWEVENT && ev.window.type == SDL_WINDOWEVENT_RESIZED) {
+			Window.w = ev.window.data1;
+			Window.h = ev.window.data2;
+		}
 	}
 	
 	return 0;
 }
 
-void renderText(const char *const buffer) {
-	if(FontTex != NULL) {
-		SDL_DestroyTexture(FontTex);
-		FontTex = NULL;
+void renderText(void) {
+	if(Text.tex != NULL) {
+		SDL_DestroyTexture(Text.tex);
+		Text.tex = NULL;
 	}
 
-	SDL_Surface *surf = TTF_RenderUTF8_Blended(Font, buffer, TextColour);
+	SDL_Surface *surf = TTF_RenderUTF8_Blended(Text.ttf, Text.buffer, TextColour);
 	if(surf == NULL) {
 		fprintf(stderr, "TTF_RenderUTF8_Blended() failed: %s\n", TTF_GetError());
 		return;
 	}
 
-	FontTex = SDL_CreateTextureFromSurface(Renderer, surf);
+	Text.w = surf->w;
+	Text.h = surf->h;
+	Text.tex = SDL_CreateTextureFromSurface(Window.renderer, surf);
 	SDL_FreeSurface(surf);
 	
-	if(FontTex == NULL) {
+	if(Text.tex == NULL) {
 		fprintf(stderr, "SDL_CreateTextureFromSurface() failed: %s\n", SDL_GetError());
 	}
 }
 
 void draw_frame(void) {
-	SDL_SetRenderDrawColor(Renderer, BackgroundColour.r, BackgroundColour.g, BackgroundColour.b, BackgroundColour.a);
-	SDL_RenderClear(Renderer);
+	SDL_SetRenderDrawColor(Window.renderer, BackgroundColour.r, BackgroundColour.g, BackgroundColour.b, BackgroundColour.a);
+	SDL_RenderClear(Window.renderer);
 
-	int windowW, windowH;
-	SDL_GetWindowSize(Window, &windowW, &windowH);
-
-	if(Logo != NULL) {
-		int logoW, logoH;
-		SDL_QueryTexture(Logo, NULL, NULL, &logoW, &logoH);
-
+	if(Logo.tex != NULL) {
 		SDL_Rect dest = (SDL_Rect) {
-			.x = (windowW - logoW) / 2,
+			.x = (Window.w - Logo.w) / 2,
 			.y = 0,
-			.w = logoW,
-			.h = logoH
+			.w = Logo.w,
+			.h = Logo.h
 		};
-		SDL_RenderCopy(Renderer, Logo, NULL, &dest);
+		SDL_RenderCopy(Window.renderer, Logo.tex, NULL, &dest);
 	}
 
-	if(FontTex != NULL) {
-		int textW, textH;
-		SDL_QueryTexture(FontTex, NULL, NULL, &textW, &textH);
-
+	if(Text.tex != NULL) {
 		SDL_Rect dest = (SDL_Rect) {
-			.x = (windowW - textW) / 2,
-			.y = windowH - textH - (windowH / 20),
-			.w = textW,
-			.h = textH
+			.x = (Window.w - Text.w) / 2,
+			.y = Window.h - Text.h - (Window.h / 20),
+			.w = Text.w,
+			.h = Text.h
 		};
-		SDL_RenderCopy(Renderer, FontTex, NULL, &dest);
+		SDL_RenderCopy(Window.renderer, Text.tex, NULL, &dest);
 	}
 
-	SDL_RenderPresent(Renderer);
+	SDL_RenderPresent(Window.renderer);
 }
 
-void read_file_contents(char *const buffer, const size_t bufsize) {
+void read_file_contents(void) {
 	FILE *f = fopen(WATCHED_FILE_NAME, "r");
 	if(f == NULL) {
 		perror("fopen() failed");
 		return;
 	}
 
-	char *ret = fgets(buffer, bufsize, f);
+	char *ret = fgets(Text.buffer, TEXT_BUFFER_SIZE, f);
 	fclose(f);
 
 	if(ret == NULL) {
@@ -189,9 +203,9 @@ void read_file_contents(char *const buffer, const size_t bufsize) {
 		return;
 	}
 
-	size_t len = strlen(buffer);
-	while(len > 0 && buffer[len-1] <= ' ') {
-		buffer[--len] = '\0';
+	size_t len = strlen(Text.buffer);
+	while(len > 0 && Text.buffer[len-1] <= ' ') {
+		Text.buffer[--len] = '\0';
 	}
 }
 
@@ -199,9 +213,7 @@ int check_inotify(void) {
 	int any_changes = 0;
 
 	struct inotify_event inev;
-	ssize_t bytes;
-
-	while((bytes = read(InotifyFD, &inev, sizeof(struct inotify_event))) > 0) {
+	while(read(InotifyFD, &inev, sizeof(struct inotify_event)) > 0) {
 		any_changes = 1;
 	}
 
@@ -209,11 +221,12 @@ int check_inotify(void) {
 }
 
 void deinit_libs(void) {
-	SDL_DestroyTexture(FontTex);
-	TTF_CloseFont(Font);
+	SDL_DestroyTexture(Logo.tex);
+	SDL_DestroyTexture(Text.tex);
+	TTF_CloseFont(Text.ttf);
 
-	SDL_DestroyRenderer(Renderer);
-	SDL_DestroyWindow(Window);
+	SDL_DestroyRenderer(Window.renderer);
+	SDL_DestroyWindow(Window.window);
 
 	TTF_Quit();
 	IMG_Quit();
@@ -223,23 +236,22 @@ void deinit_libs(void) {
 int main(void) {
 	init_inotify();
 	init_libs();
-	SDL_ShowWindow(Window);
+	SDL_ShowWindow(Window.window);
 
-	char textBuffer[256];
-	read_file_contents(textBuffer, sizeof(textBuffer));
-	renderText(textBuffer);
+	read_file_contents();
+	renderText();
 	
 	while(!quit_requested()) {
 		if(check_inotify()) {
-			read_file_contents(textBuffer, sizeof(textBuffer));
-			renderText(textBuffer);
+			read_file_contents();
+			renderText();
 		}
 
 		draw_frame();
 		SDL_Delay(FPS_TICKS);
 	}
 
-	SDL_HideWindow(Window);
+	SDL_HideWindow(Window.window);
 	deinit_libs();
 	
 	return 0;
