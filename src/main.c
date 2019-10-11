@@ -130,6 +130,9 @@ void init_libs(void) {
 
 	PrHeader = text_init(WINDOW_H / 10);
 	if(PrHeader == NULL) exit(EXIT_FAILURE);
+
+	Clock = text_init(WINDOW_H / 15);
+	if(Clock == NULL) exit(EXIT_FAILURE);
 	
 	MeetupSponsors = text_init(WINDOW_H / 12);
 	if(MeetupSponsors == NULL) exit(EXIT_FAILURE);
@@ -167,6 +170,7 @@ void draw_frame(void) {
 	SDL_RenderFillRect(Window.renderer, NULL);
 
 	draw_logo();
+	draw_clock();
 
 	Uint32 seconds = SDL_GetTicks() / 1000;
 	switch((seconds / 5) % 6){

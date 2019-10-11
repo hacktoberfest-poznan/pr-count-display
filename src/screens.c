@@ -9,6 +9,8 @@
 struct Text *PrCount, *PrHeader;
 struct Image *Logo;
 
+struct Text *Clock;
+
 struct Text *HacktoberfestSponsors, *MeetupSponsors, *MediaPatrons;
 struct Image *DOandDEV;
 struct Image *Sonalake, *Allegro;
@@ -56,6 +58,28 @@ void draw_logo(void) {
 		SDL_SetTextureAlphaMod(Logo->tex, 255 * echoOpacity);
 		SDL_RenderCopy(Window.renderer, Logo->tex, NULL, &echoDest);
 	}
+}
+
+#define CLOCK_MARGIN (WINDOW_H / 100)
+
+void draw_clock(void) {
+	static struct tm old_time;
+	struct tm now_time = *tm_now();
+
+	if(now_time.tm_min != old_time.tm_min) {
+		strftime(Clock->buffer, TEXT_BUFFER_SIZE, "%H:%M", &now_time);
+		text_render(Clock, (SDL_Colour){ .r = 127, .g = 127, .b = 127, .a = 255 });
+	}
+
+	if(Clock->tex == NULL) return;
+
+	SDL_Rect dest = (SDL_Rect) {
+		.x = CLOCK_MARGIN,
+		.y = CLOCK_MARGIN,
+		.w = Clock->w,
+		.h = Clock->h
+	};
+	SDL_RenderCopy(Window.renderer, Clock->tex, NULL, &dest);
 }
 
 void draw_counter(void) {
